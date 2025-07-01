@@ -1,0 +1,53 @@
+{% extends 'account/base.html'%}
+{% block content %}
+    <!-- Hero Section -->
+     {% if messages %}
+          {% for message in messages %}
+              {% if message.tags == 'error' %}
+                  <p style="background-color: red; color: whitesmoke; text-align: center; font-size: 1rem;">{{message}}</p>
+              {% elif message.tags == 'success' %}
+                  <p style="background-color: green; color: whitesmoke; text-align: center; font-size: 1rem;">{{message}}</p>
+              {% elif message.tags == 'info' %}
+                  <p style="background-color: yellow; color: whitesmoke; text-align: center; font-size: 1rem;">{{message}}</p>
+              {% endif %}
+          {% endfor %}
+        {% endif %}
+    <section class="hero text-white text-center py-5" style="background: linear-gradient(135deg, #0061ff, #60efff);">
+        
+    <div class="container">
+        <h1 class="display-4 fw-bold">Welcome to LinkShort</h1>
+        <p class="lead">Simplify your links. Amplify your reach.</p>
+        <a href="{% url 'user:signup'%}" class="btn btn-light btn-lg mt-3">Get Started</a>
+    </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5 bg-white">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Use LinkShort?</h2>
+        <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <h5>🔗 Shorten URLs</h5>
+            <p>Turn long URLs into short, easy-to-share links instantly.</p>
+        </div>
+        <div class="col-md-4 mb-4">
+            <h5>📊 Smart Dashboard</h5>
+            <p>Track and manage all your links from a clean dashboard.</p>
+        </div>
+        <div class="col-md-4 mb-4">
+            <h5>🔒 Privacy First</h5>
+            <p>Links are secure, and your data stays private — always.</p>
+        </div>
+        </div>
+    </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="text-center py-5 bg-light">
+    <div class="container">
+        <h2 class="fw-bold">Ready to simplify your links?</h2>
+        <p class="mb-4">Paste your long link, shorten it, and share anywhere.</p>
+        <a href="" class="btn btn-primary btn-lg">Shorten a Link</a>
+    </div>
+    </section>
+{% endblock %}

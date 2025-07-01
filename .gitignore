@@ -1,3 +1,6 @@
+desktop.ini/
+private.pem
+public.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
