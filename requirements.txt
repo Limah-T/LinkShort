@@ -14,3 +14,4 @@ mysqlclient==2.2.7
 PyJWT==2.10.1
 cryptography==45.0.4
 kickbox==2.0.4
+django-allauth==65.9.0
