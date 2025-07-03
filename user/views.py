@@ -5,8 +5,14 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .models import CustomUser
+from shortner.models import LinkShortner
+from shortner.forms import TitleForm, ShortenForm
 from .message import send_token_for_email_verification, decode_token, verify_email_from_kickbox
 from django.http import HttpResponse
+from dotenv import load_dotenv
+import os
+
+load_dotenv(override=True)
 
 from . import form
 
@@ -19,7 +25,7 @@ class SignUpView(FormView):
     success_url = "user:home"
 
     def dispatch(self, request, *args, **kwargs):
-        CustomUser.objects.all().delete()
+        # CustomUser.objects.all().delete()
         current_user = request.user
         if current_user.is_authenticated:
             return redirect("user:home")
@@ -47,6 +53,11 @@ class SignUpView(FormView):
             return render(request, 'account/email_alert.html', {'email':email})
         return super().post(request, *args, **kwargs)
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['LINK'] = os.environ.get('LINK')
+        return context
+    
 def VerifyEmail(request):
     token = request.GET.get('token')
     decoded_token = decode_token(token)
@@ -67,6 +78,7 @@ def VerifyEmail(request):
     user.email_verified = True
     user.token_valid = True
     user.save()
+    user.backend = 'django.contrib.auth.backends.ModelBackend'
     login(request, user=user)
     messages.success(request, message="Successfully created an account 👏")
     return redirect("user:home")
@@ -75,7 +87,7 @@ def VerifyEmail(request):
 class LoginView(FormView):
     form_class = form.LoginForm
     template_name = "account/login.html"
-    success_url = "user:home"
+    success_url = reverse_lazy("user:home")
 
     def dispatch(self, request, *args, **kwargs):
         current_user = request.user
@@ -90,16 +102,24 @@ class LoginView(FormView):
             password = form.cleaned_data.get('password')
             print(email, password)
             try:
-                CustomUser.objects.get(email=email)
+                usr = CustomUser.objects.get(email=email)
             except Exception as e:
                 print(e)
                 return HttpResponse("Wrong credentials")
-            user = authenticate(request, email=email, password=password)
-            if not user:
+            user = authenticate(request, username=usr.username, password=password)
+            if user: 
+                print(user)
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user=user)
+                messages.success(request, message="Successfully Logged In")
+                form = ShortenForm()
+                title_form = TitleForm()
+                all_links = LinkShortner.objects.all().order_by("-created_at")
+                return render(request, "shortner/shortner.html", {'form':form, 'title_form': title_form, 'URLs': all_links})
+            else:
+                print(user)
                 messages.error(request, message="Incorrect email or password")
-            login(request, user=user)
-            messages.success(request, message="Successfully Logged In")
-            return redirect(self.success_url)
+                return render(request, "account/login.html", {'form': self.form_class})
         return super().post(request, *args, **kwargs)
 
 @login_required(redirect_field_name="user:login")    

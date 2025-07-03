@@ -1,7 +1,8 @@
 {% extends 'account/base.html' %}
 {% block title %}Sign Up - LinkNest{% endblock %}
+{% load socialaccount %}
 {% block authentication %}
-    <li class="nav-item"><a class="nav-link" href="{% url 'user:home'%}">About</a></li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'user:home'%}">Home</a></li>
 {% endblock %}
 {% block content %}
 <div class="row justify-content-center">
@@ -35,6 +36,14 @@
                       style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer;">
                       </i>
                   </div>
+              {% elif field.name == 'password2' %}
+                  <div class="position-relative">
+                      {{ field }}
+                      <i class="fa-solid fa-eye toggle-password" 
+                      data-target="{{ field.auto_id }}"
+                      style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer;">
+                      </i>
+                  </div>
               {% else %} 
                   <p style="font-size: 2rem;">{{field}}</p>
               {% endif %}
@@ -44,9 +53,11 @@
     <div class="text-center mt-2">
       <h5 style="color: grey;">OR</h5>
     </div>
-    <button class="btn btn-light mt-2 w-100">
-      <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" width="30" height="30" class="me-2"> <span style="font-size: 0.80rem; font-weight: bold;">Continue with Google</span>
-    </button>
+    <a href="{% provider_login_url 'google' %}">
+        <button class="btn btn-light mt-2 w-100">
+        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" width="30" height="30" class="me-2"> <span style="font-size: 0.80rem; font-weight: bold;">Continue with Google</span>
+        </button>
+    </a>
     <div class="mt-3 text-center">
       <a href="{% url 'user:login'%}">Already have an account?</a>
     </div>

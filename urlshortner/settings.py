@@ -22,10 +22,14 @@ INSTALLED_APPS = [
     'shortner',
     'api',
     # THIRD PARTY APPS
+    'django.contrib.sites',
     'allauth',
     'allauth.account',
+    'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 ]
+
+SITE_ID = 2
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -72,7 +76,12 @@ AUTHENTICATION_BACKENDS = [
     
 ]
 
-
+# Use email instead of username
+# ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+# ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_AUTHENTICATION_METHOD = 'username'
+# ACCOUNT_EMAIL_REQUIRED = True
+# SOCIALACCOUNT_QUERY_EMAIL = True
 
 ROOT_URLCONF = 'urlshortner.urls'
 
@@ -140,3 +149,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "user.CustomUser"
 LOGIN_URL = "/user/login/"
+LOGIN_REDIRECT_URL = "/user/home/"
