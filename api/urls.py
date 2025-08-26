@@ -1,5 +1,10 @@
 from django.urls import path, include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .views import CustomUserViewSet, verify_email
 
 urlpatterns = [
-    path('' )
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('users/', CustomUserViewSet.as_view({'post': 'create'}), name='custom_user_create'),
+    path('verify/', verify_email, name='verify_email'),
 ]

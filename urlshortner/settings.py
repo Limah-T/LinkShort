@@ -1,6 +1,7 @@
 from pathlib import Path
 from environ import Env
-import os
+from datetime import timedelta
+import os, certifi, ssl, smtplib
 
 env = Env(
     # set default values for your environment variables here
@@ -31,6 +32,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+
+    # For blacklisting Refresh token after expiration
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 SITE_ID = 2
@@ -47,28 +51,6 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-# Provider specific settings
-# SOCIALACCOUNT_PROVIDERS = {
-#     'google': {
-#         # For each OAuth based provider, either add a ``SocialApp``
-#         # (``socialaccount`` app) containing the required client
-#         # credentials, or list them here:
-#         'APP': {
-#             'client_id': env("GOOGLE_CLIENT_ID"),
-#             'secret': env("GOOGLE_CLIENT_SECRET"),
-#             'key': ''
-#         },
-#         'SCOPE': [
-#             'profile',
-#             'email',
-#         ],
-#         'AUTH_PARAMS': {
-#             'access_type': 'online',
-#         },
-#         'OAUTH_PKCE_ENABLED': True,
-#         'FETCH_USER_INFO' : True,
-#     }
-#}
 
 AUTHENTICATION_BACKENDS = [
    
@@ -79,13 +61,6 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
     
 ]
-
-# Use email instead of username
-# ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-# ACCOUNT_USERNAME_REQUIRED = False
-# ACCOUNT_AUTHENTICATION_METHOD = 'username'
-# ACCOUNT_EMAIL_REQUIRED = True
-# SOCIALACCOUNT_QUERY_EMAIL = True
 
 ROOT_URLCONF = 'urlshortner.urls'
 
@@ -132,12 +107,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-# EMAIL_BACKEND = env('EMAIL_BACKEND')
-# EMAIL_HOST = env('EMAIL_HOST')
-# EMAIL_PORT = env('EMAIL_PORT')
-# EMAIL_USE_SSL = env('EMAIL_USE_SSL')
-# EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 LANGUAGE_CODE = 'en-us'
 
@@ -152,3 +121,39 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "api.CustomUser"
+
+# Email configuration
+EMAIL_BACKEND = env("EMAIL_BACKEND")
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_USE_TLS = bool(env("EMAIL_USE_TLS"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+
+# Force SSL certificate verification
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+smtplib.SMTP_SSL.context = ssl_context
+
+# Rest framework authentication and permission configurations
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+# SimpleJWT configuration 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(env("ACCESS_TOKEN_LIFETIME"))),  # short-lived access token
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(env("REFRESH_TOKEN_LIFETIME"))),    # longer refresh token
+    "ROTATE_REFRESH_TOKENS": bool(env("ROTATE_REFRESH_TOKENS")),      # issue new refresh on each use
+    "BLACKLIST_AFTER_ROTATION": bool(env("BLACKLIST_AFTER_ROTATION")),  # old refresh token becomes invalid
+    "UPDATE_LAST_LOGIN": bool(env("UPDATE_LAST_LOGIN")),      # update user login timestamp
+
+    "ALGORITHM": env("HASH_KEY"),
+    "SIGNING_KEY": env("KEY"),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": env("USER_ID_FIELD"),
+    "USER_ID_CLAIM": env("USER_ID_CLAIM"),
+}

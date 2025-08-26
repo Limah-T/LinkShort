@@ -5,19 +5,19 @@ import uuid, os
 
 class CustomManager(BaseUserManager):
     # For regular users
-    def create_user(self, email, valid, password=None, **extra_fields):
+    def create_user(self, email, verified, password=None, **extra_fields):
         if not email:
             raise ValidationError("Email is required")
         if not password:
             raise ValidationError("Password is required")
         email = self.normalize_email(email)
-        user = self.model(email=email, valid=valid, **extra_fields)
+        user = self.model(email=email, verified=verified, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
     # For superusers
-    def create_superuser(self, email, valid, password=None, **extra_fields):
+    def create_superuser(self, email, verified, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -25,12 +25,12 @@ class CustomManager(BaseUserManager):
             raise ValueError('Superuser must have is_staff=True.')
         if not extra_fields.get('is_superuser'):
             raise ValueError('Superuser must have is_superuser=True.')
-        return self.create_user(email=email, valid=valid, password=password, **extra_fields)
-    
+        return self.create_user(email=email, verified=verified, password=password, **extra_fields)
+
 class CustomUser(AbstractUser):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(unique=True, null=False, blank=False)
-    valid = models.BooleanField(default=False)
+    verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)

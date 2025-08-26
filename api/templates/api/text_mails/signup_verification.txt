@@ -1,0 +1,11 @@
+Hi there!
+
+Thank you for signing up for Linkshort, your minimal URL shortener that turns long links into short, shareable links.
+
+Please verify your email to activate your account:
+
+Verify your email: {{VERIFICATION_LINK}}
+
+If you didn’t sign up for Linkshort, you can safely ignore this email.
+
+© 2025 Linkshort. All rights reserved.
