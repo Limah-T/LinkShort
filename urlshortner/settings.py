@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'api',
     # THIRD PARTY APPS
     'django.contrib.sites',
+    'djoser',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -50,7 +51,6 @@ MIDDLEWARE = [
     # Add the account middleware:
     "allauth.account.middleware.AccountMiddleware",
 ]
-
 
 AUTHENTICATION_BACKENDS = [
    

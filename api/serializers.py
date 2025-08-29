@@ -1,6 +1,10 @@
+from contextvars import Token
 from .models import CustomUser, Link
+from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .tasks import send_verification_email, signup_token, update_token
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from .tasks import send_verification_email, signup_token, update_token, reset_password_token
 
 class CustomUserSerializer(serializers.Serializer):
     uuid = serializers.UUIDField(read_only=True)
@@ -9,10 +13,11 @@ class CustomUserSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         """ Validate the email address """
-        if CustomUser.objects.filter(email=value.strip()).exists():
-            raise serializers.ValidationError("Email is already in use.")
-        return value.strip()
-    
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        value = value.strip().lower()
+        return value
+
     def validate_password(self, value):
         """ Validate the password """
         if len(value) < 8:
@@ -20,6 +25,9 @@ class CustomUserSerializer(serializers.Serializer):
         return value.strip()
     
     def create(self, validated_data):
+        email = validated_data.get("email")
+        if CustomUser.objects.filter(email=email.strip().lower()).exists():
+            raise serializers.ValidationError("Email is already in use.")
         user = CustomUser(**validated_data)
         user.set_password(validated_data['password'])
         user.save()
@@ -54,4 +62,63 @@ class CustomUserSerializer(serializers.Serializer):
         )
         return instance
 
+class LoginToGetToken(TokenObtainPairSerializer):
+    email = serializers.EmailField(write_only=True)
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+
+        attrs['email'] = attrs['email'].strip().lower()
+        data = super().validate(attrs)
+
+        user = self.user
+        if not user:
+            raise serializers.ValidationError("Invalid email or password.")
+        if not user.verified:
+            raise serializers.ValidationError("User account is not verified.")
+        if not user.is_active:
+            raise serializers.ValidationError("User account is deactivated.")
+        # Deletes existing token for user
+        us = RefreshToken.for_user(user)
+        if us:
+            print("us", us)
+        data.update({
+            "user": {
+                "uuid": str(user.uuid),
+            }
+        })
+        return data
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        email = value.strip().lower()
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+        except Exception as e:
+            raise serializers.ValidationError("An error occurred while processing your request.")
+        if not user.verified:
+            raise serializers.ValidationError("User account is not verified.")
+        verification_url = reset_password_token(email=user.email, uuid=user.uuid)
+        print(verification_url)
+        send_verification_email(
+            verification_url=verification_url,
+            to_email=user.email,
+            subject="Reset your password",
+            template_name="api/reset_password.html",
+            text_template_name="api/text_mails/reset_password.txt"
+        )
+        return email
     
+class SetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        return value.strip()

@@ -35,14 +35,19 @@ def decode_jwt(token):
 
 def signup_token(email, uuid):
     token = encode_jwt(email, str(uuid))
-    verification_url = f"http://127.0.0.1:8000/api/v1/verify?token={token}"
+    verification_url = f"{os.environ.get('LINKSHORT_SITE')}/verify?token={token}"
     return verification_url
 
 def update_token(email, uuid):
     token = encode_jwt(email, str(uuid))
-    verification_url = f"http://127.0.0.1:8000/api/v1/update/verify?token={token}"
+    verification_url = f"{os.environ.get('LINKSHORT_SITE')}/update/verify?token={token}"
     return verification_url
 
+def reset_password_token(email, uuid):
+    token = encode_jwt(email, str(uuid))
+    reset_url = f"{os.environ.get('LINKSHORT_SITE')}/password/reset/verify?token={token}"
+    return reset_url
+print(os.environ.get("LINKSHORT_SITE"))
 smtp_server = os.environ.get("EMAIL_HOST")
 port = os.environ.get("EMAIL_PORT")
 sender_email = os.environ.get("EMAIL_HOST_USER")
