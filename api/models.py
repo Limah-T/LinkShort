@@ -35,6 +35,7 @@ class CustomUser(AbstractUser):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
+    id = None
     first_name = None
     last_name = None
     username = None
@@ -59,6 +60,7 @@ class Link(models.Model):
     description = models.TextField(null=True, blank=True)
     dateCreated = models.DateTimeField(auto_now_add=True)
     dateModified = models.DateTimeField(auto_now=True)
+    id = None
 
     class Meta:
         ordering = ['-dateCreated']

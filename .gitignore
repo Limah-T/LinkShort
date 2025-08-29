@@ -1,8 +1,7 @@
 desktop.ini/
 private.pem
 public.pem
-private_key.pem
-public_key.crt
+.vscode/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
