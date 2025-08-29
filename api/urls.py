@@ -13,5 +13,3 @@ urlpatterns = [
     path('password/set/', SetPasswordViewSet.as_view(), name='set_password'),
     path('account/deactivate/', DeactivateUserViewSet.as_view({'delete': 'destroy'}), name='account_deactivate'),
 ]
-
-# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NzA4NTY3OCwiaWF0IjoxNzU2NDgwODc4LCJqdGkiOiI0NzEzMGZlMjk5Zjg0MDFlYTdlOTJlZTg5ZmM4ZTU2NSIsImVtYWlsIjoiNGY2MWFmYzctZGQyZi00NmJhLTgyY2MtZWU1NTAzNzI2ZTkyIn0.4Aj85NSELsDkDNJWdduRWobmd8deftwjzoj6stl3650
