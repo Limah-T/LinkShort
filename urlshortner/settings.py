@@ -33,9 +33,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-
-    # For blacklisting Refresh token after expiration
-    'rest_framework_simplejwt.token_blacklist',
 ]
 
 SITE_ID = 2

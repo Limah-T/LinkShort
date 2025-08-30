@@ -10,7 +10,8 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer
 from .models import CustomUser
-from .tasks import decode_jwt, reset_password_token
+from .tasks import decode_jwt
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 # Create account view
 class SignupViewSet(viewsets.ModelViewSet):
