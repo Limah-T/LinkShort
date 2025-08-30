@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
@@ -7,11 +7,11 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.renderers import TemplateHTMLRenderer, JSONRenderer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, renderer_classes
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer
 from .models import CustomUser
 from .tasks import decode_jwt, send_verification_email, deactivate_account_token
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+
 
 # Create account view
 class SignupViewSet(viewsets.ModelViewSet):
@@ -81,18 +81,34 @@ class UpdateUserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['patch', 'put']
     serializer_class = CustomUserSerializer
+    queryset = CustomUser.objects.all()
+    lookup_field = 'uuid'
+
+    def get_object(self):
+        uuid = self.kwargs.get("uuid", None)
+        if not uuid:
+            return Response({"error": "Expect a uuid of the user"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = CustomUser.objects.get(uuid=uuid)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": "An error occured while checking user"}, status=status.HTTP_400_BAD_REQUEST)
+        return user
 
     def update(self, request, *args, **kwargs):
         print(request.user)
-        serializer = self.serializer_class(data=request.data, partial=True)
+        instance = self.get_object()
+        print(instance)
+        serializer = self.serializer_class(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"message": "Please check your email for verification"}, status=status.HTTP_200_OK)
-
+    
 # Verify email for update
 @api_view(['GET'])
 @authentication_classes([])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 @renderer_classes([JSONRenderer, TemplateHTMLRenderer])
 def verify_email_for_update(request):
     token = request.GET.get("token") or request.query_params.get("token")
@@ -161,6 +177,7 @@ def verify_reset_password(request):
         return Response(data={"error": "User account is deactivated"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if not user.verified:
         return Response(data={"error": "User account is not verified"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    
     user.reset_password = True
     user.save()
     return Response(data={"success": "Verification successful"}, status=status.HTTP_200_OK, template_name="api/email_verified.html")
@@ -185,7 +202,8 @@ class SetPasswordViewSet(APIView):
         serializer.is_valid(raise_exception=True)
         new_password = serializer.validated_data.get("new_password")
         old_password = user.password
-        if old_password == new_password:
+        same_password = check_password(new_password, old_password)
+        if same_password:
             return Response(data={"error": "New password cannot be the same as the old password"}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_password)
         user.reset_password = False

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    # 'rest_framework_simplejwt.token_blacklist',
 ]
 
 SITE_ID = 2
@@ -118,6 +119,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "api.CustomUser"
+
+APPEND_SLASH=False
 
 # Email configuration
 EMAIL_BACKEND = env("EMAIL_BACKEND")

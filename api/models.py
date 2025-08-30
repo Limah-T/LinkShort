@@ -29,7 +29,7 @@ class CustomManager(BaseUserManager):
         return self.create_user(email=email, verified=verified, password=password, **extra_fields)
 
 class CustomUser(AbstractUser):
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(unique=True, null=False, blank=False)
     verified = models.BooleanField(default=False)
     reset_password = models.BooleanField(default=False)
@@ -37,7 +37,6 @@ class CustomUser(AbstractUser):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
-    id = None
     first_name = None
     last_name = None
     username = None

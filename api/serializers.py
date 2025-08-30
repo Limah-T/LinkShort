@@ -1,9 +1,6 @@
-from contextvars import Token
 from .models import CustomUser, Link
-from django.contrib.auth import authenticate
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .tasks import send_verification_email, signup_token, update_token, reset_password_token
 
 class CustomUserSerializer(serializers.Serializer):
@@ -78,10 +75,6 @@ class LoginToGetToken(TokenObtainPairSerializer):
             raise serializers.ValidationError("User account is not verified.")
         if not user.is_active:
             raise serializers.ValidationError("User account is deactivated.")
-        # Deletes existing token for user
-        us = RefreshToken.for_user(user)
-        if us:
-            print("us", us)
         data.update({
             "user": {
                 "uuid": str(user.uuid),
