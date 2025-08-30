@@ -47,7 +47,12 @@ def reset_password_token(email, uuid):
     token = encode_jwt(email, str(uuid))
     reset_url = f"{os.environ.get('LINKSHORT_SITE')}/password/reset/verify?token={token}"
     return reset_url
-print(os.environ.get("LINKSHORT_SITE"))
+
+def deactivate_account_token(email, uuid):
+    token = encode_jwt(email, str(uuid))
+    deactivation_url = f"{os.environ.get('LINKSHORT_SITE')}/deactivate/account/verify?token={token}"
+    return deactivation_url
+
 smtp_server = os.environ.get("EMAIL_HOST")
 port = os.environ.get("EMAIL_PORT")
 sender_email = os.environ.get("EMAIL_HOST_USER")

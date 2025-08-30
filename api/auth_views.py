@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer
 from .models import CustomUser
-from .tasks import decode_jwt
+from .tasks import decode_jwt, send_verification_email, deactivate_account_token
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 # Create account view
@@ -41,16 +41,19 @@ def verify_email_for_signup(request):
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     
     email = payload.get("sub", None)
+    uuid = payload.get("user_id", None)
     if not email:
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    if not uuid:
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     
     user = CustomUser.objects.filter(email=email).first()
     if not user:
         return Response(data={"error": "User not found"}, status=status.HTTP_404_NOT_FOUND, template_name="api/invalid_token.html")
-    
+    if uuid != str(user.uuid):
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if user.verified:
-        return Response(data={"message": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
-    
+        return Response(data={"message": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")    
     user.verified = True
     user.save()
     return Response(data={"success": "Email verified successfully, login with your credentials to get started"}, status=status.HTTP_201_CREATED, template_name="api/email_verified.html")
@@ -88,11 +91,10 @@ class UpdateUserViewSet(viewsets.ModelViewSet):
 
 # Verify email for update
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([])
 @permission_classes([permissions.IsAuthenticated])
 @renderer_classes([JSONRenderer, TemplateHTMLRenderer])
 def verify_email_for_update(request):
-    user = request.user
     token = request.GET.get("token") or request.query_params.get("token")
     if not token:
         return Response(data={"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
@@ -100,21 +102,20 @@ def verify_email_for_update(request):
     payload = decode_jwt(token)
     if not payload:
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
-    
-    uuid = payload.get("user_id", None)
-    # Check if it's the current user that request for an update 
-    if not uuid or str(user.uuid) != uuid:
-        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
-    
     email = payload.get("sub", None)
+    uuid = payload.get("user_id", None)
     if not email:
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    if not uuid:
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     
+    user = CustomUser.objects.filter(uuid=uuid).first()
+    if not user:
+        return Response(data={"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if not user.is_active:
         return Response(data={"error": "User account is deactivated"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if not user.verified:
         return Response(data={"error": "User account is not verified"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
-    
     user.email = email
     user.save()
     return Response(data={"success": "Email updated successfully"}, status=status.HTTP_202_ACCEPTED, template_name="api/email_verified.html")
@@ -140,15 +141,22 @@ def verify_reset_password(request):
     token = request.GET.get("token") or request.query_params.get("token")
     if not token:
         return Response(data={"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    
     payload = decode_jwt(token)
     if not payload:
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     email = payload.get("sub", None)
+    uuid = payload.get("user_id", None)
     if not email:
         return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    if not uuid:
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    
     user = CustomUser.objects.filter(email=email).first()
     if not user:
         return Response(data={"error": "User not found"}, status=status.HTTP_404_NOT_FOUND, template_name="api/invalid_token.html")
+    if uuid != str(user.uuid):
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if not user.is_active:
         return Response(data={"error": "User account is deactivated"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
     if not user.verified:
@@ -172,6 +180,7 @@ class SetPasswordViewSet(APIView):
             return Response(data={"error": "User account is not verified"}, status=status.HTTP_400_BAD_REQUEST)
         if not user.reset_password:
             return Response(data={"error": "Password reset not verified, request a new password reset"}, status=status.HTTP_400_BAD_REQUEST)
+        
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_password = serializer.validated_data.get("new_password")
@@ -191,6 +200,50 @@ class DeactivateUserViewSet(viewsets.ViewSet): # Viewset - since no queryset nee
     
     def destroy(self, request, *args, **kwargs):
         user = request.user
-        user.is_active = False
-        user.save(update_fields=["is_active"])
-        return Response(data={"success": "User's account has been deactivated successfully"}, status=status.HTTP_204_NO_CONTENT)
+        if not user.is_active:
+            return Response(data={"error": "User account is already deactivated"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.verified:
+            return Response(data={"error": "You cannot deactivate an unverified account"}, status=status.HTTP_400_BAD_REQUEST)
+        # Send deactivation email
+        verification_url = deactivate_account_token(user.email, user.uuid)
+        send_verification_email(
+            verification_url=verification_url, 
+            to_email=user.email, 
+            subject="Confirm Deactivation", 
+            template_name="api/deactivate_acct_alert.html", 
+            text_template_name="api/text_mails/deactivate_acct_alert.txt"
+        )
+        return Response(data={"message": "User account deactivation in progress, confirmation email sent."}, status=status.HTTP_204_NO_CONTENT)
+    
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+@renderer_classes([JSONRenderer, TemplateHTMLRenderer])
+def verify_deactivate_account(request):
+    token = request.GET.get("token") or request.query_params.get("token")
+    if not token:
+        return Response(data={"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    payload = decode_jwt(token)
+    if not payload:
+        return Response(data={"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    
+    email = payload.get("sub", None)
+    uuid = payload.get("user_id", None)
+    if not email:
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    if not uuid:
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    
+    user = CustomUser.objects.filter(email=email).first()
+    if not user:
+        return Response(data={"error": "User not found"}, status=status.HTTP_404_NOT_FOUND, template_name="api/invalid_token.html")
+    if uuid != str(user.uuid):
+        return Response(data={"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")    
+    if not user.is_active:
+        return Response(data={"error": "User account is deactivated"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")
+    if not user.verified:
+        return Response(data={"error": "User account is not verified"}, status=status.HTTP_400_BAD_REQUEST, template_name="api/invalid_token.html")    
+    user.reset_password = False
+    user.is_active = False
+    user.save(update_fields=["reset_password", "is_active"])
+    return Response(data={"success": "Account deactivated successfully"}, status=status.HTTP_200_OK, template_name="api/deactivate_acct_verified.html")

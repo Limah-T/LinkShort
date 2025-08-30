@@ -1,0 +1,12 @@
+Account Deactivation
+
+Hello! You requested to deactivate your account for Linkshort. 
+Please confirm this new email to proceed.
+
+Click the link below to deactivate your account:
+{{VERIFICATION_LINK}}
+
+If you didn’t request this change, please ignore this message. 
+Your account will not be deactivated.
+
+© 2025 Linkshort. All rights reserved.
