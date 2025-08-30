@@ -97,6 +97,7 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("An error occurred while processing your request.")
         if not user.verified:
             raise serializers.ValidationError("User account is not verified.")
+        
         verification_url = reset_password_token(email=user.email, uuid=user.uuid)
         print(verification_url)
         send_verification_email(
@@ -115,3 +116,18 @@ class SetPasswordSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters long.")
         return value.strip()
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        password1 = attrs.get("old_password", None)
+        password2 = attrs.get("new_password", None)
+        if not password1 or not password2:
+            raise serializers.ValidationError("Both old_password and new_password fields are required")
+        if len(password1) < 8 or len(password2) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if password1.strip() == password2.strip():
+            raise serializers.ValidationError("Old and new password cannot be the same.")
+        return attrs

@@ -8,10 +8,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.renderers import TemplateHTMLRenderer, JSONRenderer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, renderer_classes
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer
+from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer, ChangePasswordSerializer
 from .models import CustomUser
 from .tasks import decode_jwt, send_verification_email, deactivate_account_token
-
 
 # Create account view
 class SignupViewSet(viewsets.ModelViewSet):
@@ -208,7 +207,50 @@ class SetPasswordViewSet(APIView):
         user.set_password(new_password)
         user.reset_password = False
         user.save()
-        return Response(data={"success": "Password has been reset successfully"}, status=status.HTTP_200_OK)    
+        return Response(data={"success": "Password has been reset successfully"}, status=status.HTTP_200_OK)  
+
+# Change password
+class ChangePasswordViewSet(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['post']
+    serializer_class = ChangePasswordSerializer 
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        if not user.is_active:
+            return Response({"error": "User's account has been deactivated"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.verified:
+            return Response({"error": "User's account has not been verified"}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        old_password = serializer.validated_data.get("old_password")
+        new_password = serializer.validated_data.get("new_password")
+        valid_old_password = check_password(old_password, user.password)
+        if not valid_old_password:
+            return Response({"error": "Incorrect old password"}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save()
+        return Response({"success": "Password has been changed successfully"}, status=status.HTTP_200_OK)
+    
+# Profile view
+class ProfileViewset(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get']
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not user.is_active:
+            return Response({"error": "User's account has been deactivated"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.verified:
+            return Response({"error": "User's account has not been verified"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "uuid": user.uuid,
+            "email": user.email,
+            "date_joined": user.date_joined,
+            "account_status": "active",
+        }, status=status.HTTP_200_OK)
 
 # Deactivate user
 class DeactivateUserViewSet(viewsets.ViewSet): # Viewset - since no queryset needed
