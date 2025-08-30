@@ -8,6 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.renderers import TemplateHTMLRenderer, JSONRenderer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, renderer_classes
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from .serializers import CustomUserSerializer, LoginToGetToken, ResetPasswordSerializer, SetPasswordSerializer, ChangePasswordSerializer
 from .models import CustomUser
 from .tasks import decode_jwt, send_verification_email, deactivate_account_token
@@ -251,6 +252,46 @@ class ProfileViewset(APIView):
             "date_joined": user.date_joined,
             "account_status": "active",
         }, status=status.HTTP_200_OK)
+
+# View all users - Admin permission only    
+class ViewAllUsersViewset(viewsets.ModelViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAdminUser, permissions.IsAuthenticated]
+    http_method_names = ['get']
+    serializer_class = CustomUserSerializer
+    queryset = CustomUser.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not user.is_active:
+            return Response({"error": "User's account has been deactivated"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.verified:
+            return Response({"error": "User's account has not been verified"}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data=self.queryset)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
+
+# Logout user
+class LogoutViewset(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        print(user)
+        if not user.is_active:
+            return Response({"error": "User's account has been deactivated"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.verified:
+            return Response({"error": "User's account has not been verified"}, status=status.HTTP_400_BAD_REQUEST)
+        tokens = OutstandingToken.objects.filter(user=user)
+        print(tokens)
+        if tokens:
+            for token in tokens:
+                print("About to blacklist token")
+                BlacklistedToken.objects.get_or_create(token=token)
+                token.delete()
+        print("checking", OutstandingToken.objects.filter(user=user))        
+        return Response({"success": "Logged out!"}, status=status.HTTP_200_OK)
 
 # Deactivate user
 class DeactivateUserViewSet(viewsets.ViewSet): # Viewset - since no queryset needed

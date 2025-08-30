@@ -99,7 +99,6 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("User account is not verified.")
         
         verification_url = reset_password_token(email=user.email, uuid=user.uuid)
-        print(verification_url)
         send_verification_email(
             verification_url=verification_url,
             to_email=user.email,

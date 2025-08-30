@@ -14,7 +14,7 @@ def delete_blacklisted_tokens(sender, instance, **kwargs):
             token.delete()
         print("Deleted all the tokens associated to the user")
 
-@receiver(signal=pre_save, sender=OutstandingToken)
+@receiver(signal=pre_save, sender=CustomUser)
 def blacklist_token_for_password_reset(sender, instance, **kwargs):
     """
     When a user changes their password, blacklist all their existing tokens.
